@@ -49,6 +49,7 @@ import { ToolbarComponent } from './shared/components/toolbar/toolbar.component'
 import { ToolbarLogoComponent } from './shared/components/toolbar/logo.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
 import { RoomConfigComponent } from './shared/components/room-config/room-config.component';
+import { VirtualRoomComponent } from './shared/components/stream/vroom.component';
 
 // Services
 import { NetworkService } from './shared/services/network/network.service';
@@ -99,6 +100,7 @@ import { StorageService } from './shared/services/storage/storage.service';
 		FooterComponent,
 		ToolbarComponent,
 		ToolbarLogoComponent,
+		VirtualRoomComponent,
 		LinkifyPipe,
 		HasChatPipe,
 		HasAudioPipe,

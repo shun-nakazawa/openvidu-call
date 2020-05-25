@@ -1,6 +1,28 @@
 import { StreamManager, Publisher } from 'openvidu-browser';
 import { VideoType } from '../types/video-type';
 
+export class UserLocation {
+	/**
+	 * User location: x
+	 */
+	x: number;
+
+	/**
+	 * User location: y
+	 */
+	y: number;
+
+	constructor() {
+		this.x = 0;
+		this.y = 0;
+	}
+
+	update(x, y) {
+		this.x = x;
+		this.y = y;
+	}
+}
+
 /**
  * Packs all the information about the user
  */
@@ -21,6 +43,11 @@ export class UserModel {
 	streamManager: StreamManager;
 
 	/**
+	 * Location of user
+	 */
+	location: UserLocation;
+
+	/**
 	 * @hidden
 	 */
 	videoAvatar: HTMLCanvasElement;
@@ -38,6 +65,11 @@ export class UserModel {
 	/**
 	 * @hidden
 	 */
+	private audioVolume: number;
+
+	/**
+	 * @hidden
+	 */
 	constructor(
 		connectionId?: string,
 		streamManager?: StreamManager,
@@ -46,6 +78,8 @@ export class UserModel {
 		this.connectionId = connectionId || '';
 		this.nickname = nickname || 'OpenVidu';
 		this.streamManager = streamManager || null;
+		this.location = new UserLocation();
+		this.audioVolume = 1.0;
 	}
 
 	/**
@@ -138,6 +172,23 @@ export class UserModel {
 		this.nickname = nickname;
 	}
 
+	/**
+	 * Set the user location value
+	 * @param x value of x
+	 * @param y value of y
+	 */
+	public setLocation(x: number, y: number) {
+		this.location.update(x, y);
+	}
+
+	/**
+	 * Get the user location value
+	 * @return UserLocation
+	 */
+	public getLocation(): UserLocation {
+		return this.location;
+	}
+
 	public isVideoSizeBig(): boolean {
 		return this.videoSizeBig;
 	}
@@ -147,6 +198,14 @@ export class UserModel {
 	 */
 	public setVideoSizeBig(big: boolean) {
 		this.videoSizeBig = big;
+	}
+
+	public getAudioVolume(): number {
+		return this.audioVolume;
+	}
+
+	public setAudioVolume(audioVolume: number) {
+		this.audioVolume = audioVolume;
 	}
 
 	/**

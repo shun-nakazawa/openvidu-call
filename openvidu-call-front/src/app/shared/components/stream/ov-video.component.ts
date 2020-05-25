@@ -9,6 +9,7 @@ import { VideoType } from '../../types/video-type';
 			#videoElement
 			[attr.id]="streamManager && _streamManager.stream ? 'video-' + _streamManager.stream.streamId : 'video-undefined'"
 			[muted]="mutedSound"
+			[volume]="audioVolume !== undefined ? audioVolume : 1.0"
 		></video>
 	`,
 	styleUrls: ['./stream.component.css']
@@ -16,6 +17,8 @@ import { VideoType } from '../../types/video-type';
 export class OpenViduVideoComponent implements AfterViewInit {
 
 	@Input() mutedSound: boolean;
+
+	@Input() audioVolume: number;
 
 	@Output() toggleVideoSizeEvent =  new EventEmitter<any>();
 

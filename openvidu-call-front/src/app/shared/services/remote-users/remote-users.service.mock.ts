@@ -30,6 +30,8 @@ export class RemoteUsersServiceMock {
 
 	updateNickname(connectionId: any, nickname: any) {}
 
+	updateLocation(connectionId: any, x: number, y: number) {}
+
 	clean() {}
 
 	getUserAvatar(connectionId: string): string {

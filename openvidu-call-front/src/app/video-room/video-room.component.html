@@ -74,12 +74,19 @@
             <stream-component
               [user]="user"
               [videoSizeBig]="user.videoSizeBig"
+              [audioVolume]="user.audioVolume"
               (toggleVideoSizeClicked)="onToggleVideoSize($event)"
             ></stream-component>
           </div>
         </div>
       </mat-sidenav-content>
     </mat-sidenav-container>
+
+    <vroom-component
+      [localUsers]="localUsers"
+      [remoteUsers]="remoteUsers"
+      (locationChanged)="onLocationUpdate($event.x, $event.y)"
+    ></vroom-component>
 
     <app-footer
       [lightTheme]="lightTheme"

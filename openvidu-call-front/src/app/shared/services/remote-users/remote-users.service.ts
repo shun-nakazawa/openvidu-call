@@ -80,6 +80,11 @@ export class RemoteUsersService {
 		this._remoteUsers.next(this.users);
 	}
 
+	updateLocation(connectionId: any, x: number, y: number) {
+		const user = this.getRemoteUserByConnectionId(connectionId);
+		user?.setLocation(x, y);
+		this._remoteUsers.next(this.users);
+	}
 
 	clean() {
 		this._remoteUsers = <BehaviorSubject<UserModel[]>>new BehaviorSubject([]);

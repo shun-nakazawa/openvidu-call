@@ -139,6 +139,12 @@ export class OpenViduSessionServiceMock {
 		return null;
 	}
 
+	setWebcamLocation(x: number, y: number) {}
+
+	getWebcamLocation(): UserLocation {
+		return null;
+	}
+
 	getWebCamAvatar(): string {
 		return null;
 	}

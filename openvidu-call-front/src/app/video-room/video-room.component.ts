@@ -152,6 +152,7 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 		this.subscribeToStreamDestroyed();
 		this.subscribeToStreamPropertyChange();
 		this.subscribeToNicknameChanged();
+		this.subscribeToLocationChanged();
 		this.chatService.setChatComponent(this.chatSidenav);
 		this.chatService.subscribeToChat();
 		this.subscribeToChatComponent();
@@ -169,6 +170,12 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 	onNicknameUpdate(nickname: string) {
 		this.oVSessionService.setWebcamName(nickname);
 		this.sendNicknameSignal(nickname);
+	}
+
+	onLocationUpdate(x: number, y: number) {
+		this.oVSessionService.setWebcamLocation(x, y);
+		this.sendLocationSignal(x, y);
+		this.updateLocations();
 	}
 
 	toggleMic() {
@@ -363,6 +370,8 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 			const subscriber: Subscriber = this.session.subscribe(event.stream, undefined);
 			this.remoteUsersService.add(event, subscriber);
 			this.sendNicknameSignal(this.oVSessionService.getWebcamUserName(), event.stream.connection);
+			const location = this.oVSessionService.getWebcamLocation();
+			this.sendLocationSignal(location.x, location.y, event.stream.connection);
 		});
 	}
 
@@ -399,6 +408,18 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 			}
 			const nickname = JSON.parse(event.data).nickname;
 			this.remoteUsersService.updateNickname(connectionId, nickname);
+		});
+	}
+
+	private subscribeToLocationChanged() {
+		this.session.on('signal:locationChanged', (event: any) => {
+			const connectionId = event.from.connectionId;
+			if (this.oVSessionService.isMyOwnConnection(connectionId)) {
+				return;
+			}
+			const { x, y } = JSON.parse(event.data);
+			this.remoteUsersService.updateLocation(connectionId, x, y);
+			this.updateLocations();
 		});
 	}
 
@@ -487,6 +508,15 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 		this.session.signal(signalOptions);
 	}
 
+	private sendLocationSignal(x: number, y: number , connection?: Connection) {
+		const signalOptions: SignalOptions = {
+			data: JSON.stringify({ x, y }),
+			type: 'locationChanged',
+			to: connection ? [connection] : undefined
+		};
+		this.session.signal(signalOptions);
+	}
+
 	private updateOpenViduLayout(timeout?: number) {
 		if (!!this.openviduLayout) {
 			if (!timeout) {
@@ -516,6 +546,25 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 		this.remoteUsersSubscription = this.remoteUsersService.remoteUsers.subscribe((users) => {
 			this.remoteUsers = [...users];
 			this.updateOpenViduLayout();
+		});
+	}
+
+	/**
+	 * Compute audio/video properties using distance between users
+	 */
+	private updateLocations() {
+		const baseLocation = this.oVSessionService.getWebcamLocation();
+		this.remoteUsers.forEach(remoteUser => {
+			const dx = remoteUser.location.x - baseLocation.x;
+			const dy = remoteUser.location.y - baseLocation.y;
+			const distance = Math.sqrt(dx * dx + dy * dy);
+			let volume = 0.0;
+			if (distance < 10.0) {
+				volume = 1.0;
+			} else if (distance < 260.0) {
+				volume = 1.0 - ((distance - 10.0) / 250.0);
+			}
+			remoteUser.setAudioVolume(volume);
 		});
 	}
 }

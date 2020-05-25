@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { UserModel } from '../../models/user-model';
+import { UserModel, UserLocation } from '../../models/user-model';
 import { OpenVidu, PublisherProperties, Publisher, Session } from 'openvidu-browser';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { ScreenType } from '../../types/video-type';
@@ -327,6 +327,14 @@ export class OpenViduSessionService {
 
 	setWebcamName(nickname: string) {
 		this.webcamUser.setNickname(nickname);
+	}
+
+	setWebcamLocation(x: number, y: number) {
+		this.webcamUser.setLocation(x, y);
+	}
+
+	getWebcamLocation(): UserLocation {
+		return this.webcamUser.getLocation();
 	}
 
 	getWebCamAvatar(): string {

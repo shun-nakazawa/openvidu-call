@@ -52,6 +52,7 @@ import { VideoRoomComponent } from './video-room/video-room.component';
 import { HomeComponent } from './home/home.component';
 import { AppComponent } from './app.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
+import { VirtualRoomComponent } from './shared/components/vroom/vroom.component';
 
 // Services
 import { NetworkService } from './shared/services/network/network.service';
@@ -75,6 +76,7 @@ import { StorageService } from './shared/services/storage/storage.service';
 		DialogErrorComponent,
 		RoomConfigComponent,
 		WebComponentComponent,
+		VirtualRoomComponent,
 		ToolbarComponent,
 		ToolbarLogoComponent,
 		LinkifyPipe,

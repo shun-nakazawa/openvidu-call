@@ -22,6 +22,7 @@ export class StreamComponent implements OnInit {
 	matcher: NicknameMatcher;
 
 	_user: UserModel;
+	@Input() audioVolume: number;
 	@Output() nicknameClicked = new EventEmitter<any>();
 	@Output() replaceScreenTrackClicked = new EventEmitter<any>();
 	@Output() toggleVideoSizeClicked = new EventEmitter<any>();
