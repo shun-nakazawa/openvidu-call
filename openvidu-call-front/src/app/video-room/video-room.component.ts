@@ -176,6 +176,9 @@ export class VideoRoomComponent implements OnInit, OnDestroy {
 		this.oVSessionService.setWebcamLocation(x, y);
 		this.sendLocationSignal(x, y);
 		this.updateLocations();
+		if (this.openviduLayout) {
+			this.updateOpenViduLayout();
+		}
 	}
 
 	toggleMic() {
