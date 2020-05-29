@@ -51,6 +51,11 @@ export interface OpenViduLayoutOptions {
 	 * Whether to place the big one in the top left `true` or bottom right
 	 */
 	bigFirst: any;
+
+	/**
+	 * Whether vroom
+	 */
+	vroom: boolean;
 }
 
 export class OpenViduLayout {
@@ -131,7 +136,8 @@ export class OpenViduLayout {
 						this.opts.bigFixedRatio,
 						this.opts.bigMinRatio,
 						this.opts.bigMaxRatio,
-						this.opts.animate
+						this.opts.animate,
+						this.opts.vroom
 					);
 					this.arrange(
 						smallOnes,
@@ -142,7 +148,8 @@ export class OpenViduLayout {
 						this.opts.fixedRatio,
 						this.opts.minRatio,
 						this.opts.maxRatio,
-						this.opts.animate
+						this.opts.animate,
+						this.opts.vroom
 					);
 				} else {
 					this.arrange(
@@ -154,7 +161,8 @@ export class OpenViduLayout {
 						this.opts.fixedRatio,
 						this.opts.minRatio,
 						this.opts.maxRatio,
-						this.opts.animate
+						this.opts.animate,
+						this.opts.vroom
 					);
 					this.arrange(
 						bigOnes,
@@ -165,7 +173,8 @@ export class OpenViduLayout {
 						this.opts.bigFixedRatio,
 						this.opts.bigMinRatio,
 						this.opts.bigMaxRatio,
-						this.opts.animate
+						this.opts.animate,
+						this.opts.vroom
 					);
 				}
 			} else if (bigOnes.length > 0 && smallOnes.length === 0) {
@@ -180,7 +189,8 @@ export class OpenViduLayout {
 						this.opts.bigFixedRatio,
 						this.opts.bigMinRatio,
 						this.opts.bigMaxRatio,
-						this.opts.animate
+						this.opts.animate,
+						this.opts.vroom
 					);
 			} else {
 				this.arrange(
@@ -192,7 +202,8 @@ export class OpenViduLayout {
 					this.opts.fixedRatio,
 					this.opts.minRatio,
 					this.opts.maxRatio,
-					this.opts.animate
+					this.opts.animate,
+					this.opts.vroom
 				);
 			}
 		}, 50);
@@ -214,7 +225,8 @@ export class OpenViduLayout {
 			bigFixedRatio: opts.bigFixedRatio != null ? opts.bigFixedRatio : false,
 			bigMaxRatio: opts.bigMaxRatio != null ? opts.bigMaxRatio : 3 / 2,
 			bigMinRatio: opts.bigMinRatio != null ? opts.bigMinRatio : 9 / 16,
-			bigFirst: opts.bigFirst != null ? opts.bigFirst : true
+			bigFirst: opts.bigFirst != null ? opts.bigFirst : true,
+			vroom: opts.vroom != null ? opts.vroom : false
 		};
 		this.layoutContainer = typeof container === 'string' ? $(container) : container;
 	}
@@ -378,7 +390,8 @@ export class OpenViduLayout {
 		fixedRatio: boolean,
 		minRatio: number,
 		maxRatio: number,
-		animate: any
+		animate: any,
+		vroom: boolean
 	) {
 		let targetHeight;
 
@@ -412,15 +425,21 @@ export class OpenViduLayout {
 				rows.push(row);
 			}
 			const elem: HTMLVideoElement = children[i];
-			row.children.push(elem);
-			let targetWidth = dimensions.targetWidth;
-			targetHeight = dimensions.targetHeight;
+			const streamComponent = elem.querySelector('stream-component[ng-reflect-audio-volume]');
+			const child = {
+				elem,
+				width: dimensions.targetWidth,
+				height: dimensions.targetHeight,
+				vroomRatio: streamComponent != null ?
+					parseFloat(streamComponent.getAttribute('ng-reflect-audio-volume')) : 1
+			};
 			// If we're using a fixedRatio then we need to set the correct ratio for this element
 			if (fixedRatio) {
-				targetWidth = targetHeight / this.getVideoRatio(elem);
+				child.width = child.height / this.getVideoRatio(elem);
 			}
-			row.width += targetWidth;
-			row.height = targetHeight;
+			row.children.push(child);
+			row.width += child.width;
+			row.height = child.height;
 		}
 		// Calculate total row height adjusting if we go too wide
 		let totalRowHeight = 0;
@@ -457,7 +476,32 @@ export class OpenViduLayout {
 				totalRowHeight += row.height;
 			}
 		}
+		// Adjust size according to vroom ratio
+		if (vroom) {
+			let baseWidth = 0;
+			let totalHeightRatio = 0;
+			for (const r of rows) {
+				const totalWidthRatio = r.children.reduce((total, child) => total + child.vroomRatio, 0);
+				const totalWidth = r.children.reduce((total, child) => total + child.width, 0);
+				if (totalWidthRatio > 0 && baseWidth < totalWidth) {
+					baseWidth = totalWidth / totalWidthRatio;
+				}
+				totalHeightRatio += r.children.reduce((max, child) => Math.max(max, child.vroomRatio), 0);
+			}
+			const baseHeight = HEIGHT / totalHeightRatio;
+			for (const r of rows) {
+				for (const child of r.children) {
+					child.width = baseWidth * child.vroomRatio;
+					child.height = baseHeight * child.vroomRatio;
+				}
+			}
+			for (const r of rows) {
+				r.width = r.children.reduce((total, child) => total + child.width, 0);
+				r.height = r.children.reduce((max, child) => Math.max(max, child.height), 0);
+			}
+		}
 		// vertical centering
+		totalRowHeight = rows.reduce((total, r) => total + r.height, 0);
 		y = (HEIGHT - totalRowHeight) / 2;
 		// Iterate through each row and place each child
 		for (let i = 0; i < rows.length; i++) {
@@ -466,10 +510,10 @@ export class OpenViduLayout {
 			const rowMarginLeft = (WIDTH - row.width) / 2;
 			x = rowMarginLeft;
 			for (let j = 0; j < row.children.length; j++) {
-				const elem: HTMLVideoElement = row.children[j];
+				const elem: HTMLVideoElement = row.children[j].elem;
 
-				let targetWidth = dimensions.targetWidth;
-				targetHeight = row.height;
+				let targetWidth = row.children[j].width;
+				targetHeight = row.children[j].height;
 				// If we're using a fixedRatio then we need to set the correct ratio for this element
 				if (fixedRatio) {
 					targetWidth = Math.floor(targetHeight / this.getVideoRatio(elem));
@@ -494,10 +538,12 @@ export class OpenViduLayout {
 					this.getCSSNumber(elem, 'borderTop') -
 					this.getCSSNumber(elem, 'borderBottom');
 
-				this.positionElement(elem, x + offsetLeft, y + offsetTop, actualWidth, actualHeight, animate);
+				const offsetTop2 = (row.height - targetHeight) / 2;
+
+				this.positionElement(elem, x + offsetLeft, y + offsetTop + offsetTop2, actualWidth, actualHeight, animate);
 				x += targetWidth;
 			}
-			y += targetHeight;
+			y += row.height;
 		}
 	}
 
