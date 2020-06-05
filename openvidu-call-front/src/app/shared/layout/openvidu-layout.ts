@@ -425,13 +425,13 @@ export class OpenViduLayout {
 				rows.push(row);
 			}
 			const elem: HTMLVideoElement = children[i];
-			const streamComponent = elem.querySelector('stream-component[ng-reflect-audio-volume]');
+			const ovVideoComponent = elem.querySelector('ov-video[data-audio-volume]');
 			const child = {
 				elem,
 				width: dimensions.targetWidth,
 				height: dimensions.targetHeight,
-				vroomRatio: streamComponent != null ?
-					parseFloat(streamComponent.getAttribute('ng-reflect-audio-volume')) : 1
+				vroomRatio: ovVideoComponent != null ?
+					parseFloat(ovVideoComponent.getAttribute('data-audio-volume')) : 1
 			};
 			// If we're using a fixedRatio then we need to set the correct ratio for this element
 			if (fixedRatio) {
