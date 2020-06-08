@@ -76,12 +76,11 @@ class MainScene extends Phaser.Scene {
 	private isoPhysics: IsoPhysics;
 	private cursors: {[key: string]: Phaser.Input.Keyboard.Key};
 	private isoGroup: Phaser.GameObjects.Group;
-	private player: IsoSprite;
-	private remotePlayers: {[key: string]: IsoSprite} = {};
+	private player: VRoomPlayer;
+	private remotePlayers: {[key: string]: VRoomPlayer} = {};
 	private beforePlayerLocation: UserLocation;
 	private localUserModel: UserModel;
 	private remoteUserModels: UserModel[] = [];
-	private playerAngle: number;
 
 	playerLocationChanged = new Subject<UserLocation>();
 
@@ -162,21 +161,18 @@ class MainScene extends Phaser.Scene {
 			y = this.localUserModel.location.y;
 			nickname = this.localUserModel.nickname;
 		}
-		// @ts-ignore
-		this.player = this.add.isoSprite(x, y, 15, 'cube2', this.isoGroup);
-		this.player.tint = 0x86bfda;
-		this.isoPhysics.world.enable(this.player);
-
-		this.player.viewingCursor = this.add.graphics();
-		this.player.viewingCursor.depth = 10000;
-		this.playerAngle = 0;
-
-		this.player.nickname = this.add.text(0, 0, nickname, {
-			fontSize: '24px',
-			backgroundColor: 'rgba(0, 0, 0, 0.8)',
-			color: '#fff'
-		});
-		this.player.nickname.depth = 11000;
+		this.player = new VRoomPlayer(this, this.iso, this.isoPhysics);
+		this.player.addCharacter(x, y, 15, this.isoGroup, 0x86bfda, true);
+		this.player.addViewingCursor(
+			10000,
+			0,
+			VIEWING_ANGLE,
+			VIEW_LINE_LENGTH,
+			8,
+			0xff0000,
+			0.5
+		);
+		this.player.addNickname(nickname, 11000, '#fff', 'rgba(0, 0, 0, 0.8)');
 	}
 
 	update(): void {
@@ -215,17 +211,9 @@ class MainScene extends Phaser.Scene {
 			angle = -ROTATION_SPEED;
 		}
 
-		this.player.body.velocity.setTo(x, y);
-
-		this.playerAngle = (this.playerAngle + angle + 360) % 360;
-		this.updateFacingCursor(
-			this.player.viewingCursor,
-			this.player.x, this.player.y + this.player.height * 0.365 * Math.cos(Math.PI),
-			this.playerAngle, VIEWING_ANGLE, VIEW_LINE_LENGTH,
-			8, 0xff0000, 0.5
-		);
-
-		this.updateNicknameView(this.player.nickname, this.player.x, this.player.y - this.player.height / 2);
+		this.player.setVelocity(x, y);
+		this.player.addAngle(angle);
+		this.player.update();
 	}
 
 	private updateRemotePlayers(): void {
@@ -236,67 +224,164 @@ class MainScene extends Phaser.Scene {
 
 		for (const remoteUser of this.remoteUserModels) {
 			const id = remoteUser.connectionId;
-			let remotePlayer: IsoSprite;
+			let remotePlayer: VRoomPlayer;
 			if (id in this.remotePlayers) {
 				remotePlayer = this.remotePlayers[id];
 				updated[id] = true;
 			} else {
-				// @ts-ignore
-				remotePlayer = this.add.isoSprite(128, 128, 15, 'cube2', this.isoGroup);
-				remotePlayer.tint = 0xbf86da;
-				this.isoPhysics.world.enable(remotePlayer);
-				remotePlayer.viewingCursor = this.add.graphics();
-				remotePlayer.viewingCursor.depth = 9999;
-				remotePlayer.nickname = this.add.text(0, 0, remoteUser.nickname, {
-					fontSize: '24px',
-					backgroundColor: 'rgba(0, 0, 0, 0.65)',
-					color: '#fff'
-				});
-				remotePlayer.nickname.depth = 10999;
+				remotePlayer = new VRoomPlayer(this, this.iso, this.isoPhysics);
+				remotePlayer.addCharacter(0, 0, 15, this.isoGroup, 0xbf86da, false);
+				remotePlayer.addViewingCursor(
+					9999,
+					0,
+					VIEWING_ANGLE,
+					VIEW_LINE_LENGTH / 2,
+					4,
+					0x00ffff,
+					0.5
+				);
+				remotePlayer.addNickname(remoteUser.nickname, 10999, '#fff', 'rgba(0, 0, 0, 0.65)');
 				this.remotePlayers[id] = remotePlayer;
 			}
-			remotePlayer.isoX = remoteUser.location.x;
-			remotePlayer.isoY = remoteUser.location.y;
-			this.updateFacingCursor(
-				remotePlayer.viewingCursor,
-				remotePlayer.x, remotePlayer.y + remotePlayer.height * 0.365 * Math.cos(Math.PI),
-				remoteUser.location.angle, VIEWING_ANGLE, VIEW_LINE_LENGTH / 2,
-				4, 0x00ffff, 0.5
-			);
-
-			this.updateNicknameView(remotePlayer.nickname, remotePlayer.x, remotePlayer.y - remotePlayer.height / 2);
+			remotePlayer.setLocation(remoteUser.location);
+			remotePlayer.update();
 		}
 
 		for (const id of Object.keys(updated)) {
 			if (updated[id]) { continue; }
-			const remotePlayer = this.remotePlayers[id];
-			this.isoPhysics.world.bodies.delete(remotePlayer.body);
-			remotePlayer.destroy();
-			remotePlayer.viewingCursor.destroy();
+			this.remotePlayers[id].destroy();
 			delete this.remotePlayers[id];
 		}
 	}
 
-	private updateFacingCursor(obj: Phaser.GameObjects.Graphics,
-														 x: number, y: number, angle: number,
-														 viewingAngle: number, viewLineLength: number,
-														 viewLineWidth: number, color: number, alpha: number): void {
-		obj.setX(x);
-		obj.setY(y);
+	getPlayerLocation(): UserLocation {
+		return this.player.getLocation();
+	}
+
+	setPlayerLocation(location: UserLocation): void {
+		this.player.setLocation(location);
+	}
+
+	setRemoteUsers(users: UserModel[]): void {
+		this.remoteUserModels = users;
+	}
+
+	setLocalUser(user: UserModel): void {
+		this.localUserModel = user;
+	}
+}
+
+
+class VRoomPlayer {
+	private readonly scene: Phaser.Scene;
+	private iso: IsoPlugin;
+	private isoPhysics: IsoPhysics;
+	private enabledPhysics: boolean;
+
+	character: IsoSprite;
+	viewingCursor: Phaser.GameObjects.Graphics;
+	nicknameView: Phaser.GameObjects.Text;
+
+	angle: number;
+	viewingAngle: number;
+	viewLineLength: number;
+	viewLineWidth: number;
+	viewingCursorColor: number;
+	viewingCursorAlpha: number;
+
+	constructor(scene: Phaser.Scene, iso: IsoPlugin, isoPhysics: IsoPhysics) {
+		this.scene = scene;
+		this.iso = iso;
+		this.isoPhysics = isoPhysics;
+	}
+
+	addCharacter(
+		x: number,
+		y: number,
+		z: number,
+		group: Phaser.GameObjects.Group,
+		tint: number,
+		enabledPhysics: boolean
+	): void {
+		this.character = new IsoSprite(this.scene, x, y, z, 'cube2', 0);
+		this.character.tint = tint;
+		group.add(this.character, true);
+		this.enabledPhysics = enabledPhysics;
+		if (this.enabledPhysics) {
+			this.isoPhysics.world.enable(this.character);
+		}
+	}
+
+	addViewingCursor(
+		depth: number,
+		angle: number,
+		viewingAngle: number,
+		viewLineLength: number,
+		viewLineWidth: number,
+		viewingCursorColor: number,
+		viewingCursorAlpha: number
+	): void {
+		this.viewingCursor = new Phaser.GameObjects.Graphics(this.scene);
+		this.viewingCursor.depth = depth;
+		this.scene.add.existing(this.viewingCursor);
+
+		this.angle = angle;
+		this.viewingAngle = viewingAngle;
+		this.viewLineLength = viewLineLength;
+		this.viewLineWidth = viewLineWidth;
+		this.viewingCursorColor = viewingCursorColor;
+		this.viewingCursorAlpha = viewingCursorAlpha;
+	}
+
+	addNickname(
+		nickname: string,
+		depth: number,
+		color: string,
+		backgroundColor: string
+	): void {
+		this.nicknameView = new Phaser.GameObjects.Text(this.scene, 0, 0, nickname, {
+			fontSize: '24px',
+			backgroundColor: backgroundColor,
+			color: color
+		});
+		this.nicknameView.depth = depth;
+		this.scene.add.existing(this.nicknameView);
+	}
+
+	setVelocity(velocityX: number, velocityY: number): void {
+		this.character.body.velocity.setTo(velocityX, velocityY);
+	}
+
+	addAngle(angle: number): void {
+		this.setAngle(this.angle + angle);
+	}
+
+	setAngle(angle: number): void {
+		this.angle = (angle + 360) % 360;
+	}
+
+	update(): void {
+		this.updateViewingCursor();
+		this.updateNicknameView();
+	}
+
+	updateViewingCursor(): void {
+		this.viewingCursor.setX(this.character.x);
+		this.viewingCursor.setY(this.character.y + this.character.height * 0.365 * Math.cos(Math.PI));
 
 		const p0 = this.iso.projector.project(new IsoPoint3());
 		const p1 = this.iso.projector.project(new IsoPoint3(
-			viewLineLength * Math.cos((angle - viewingAngle / 2) / 360 * (Math.PI * 2)),
-			viewLineLength * Math.sin((angle - viewingAngle / 2) / 360 * (Math.PI * 2)),
+			this.viewLineLength * Math.cos((this.angle - this.viewingAngle / 2) / 360 * (Math.PI * 2)),
+			this.viewLineLength * Math.sin((this.angle - this.viewingAngle / 2) / 360 * (Math.PI * 2)),
 		));
 		const p2 = this.iso.projector.project(new IsoPoint3(
-			viewLineLength * Math.cos((angle + viewingAngle / 2) / 360 * (Math.PI * 2)),
-			viewLineLength * Math.sin((angle + viewingAngle / 2) / 360 * (Math.PI * 2)),
+			this.viewLineLength * Math.cos((this.angle + this.viewingAngle / 2) / 360 * (Math.PI * 2)),
+			this.viewLineLength * Math.sin((this.angle + this.viewingAngle / 2) / 360 * (Math.PI * 2)),
 		));
 
-		obj
+		this.viewingCursor
 			.clear()
-			.lineStyle(viewLineWidth, color, alpha)
+			.lineStyle(this.viewLineWidth, this.viewingCursorColor, this.viewingCursorAlpha)
 			.beginPath()
 			.moveTo(p1.x - p0.x, p1.y - p0.y)
 			.lineTo(0, 0)
@@ -306,30 +391,31 @@ class MainScene extends Phaser.Scene {
 			.strokePath();
 	}
 
-	private updateNicknameView(obj: Phaser.GameObjects.Text, x: number, y: number): void {
-		obj.setX(x - obj.width / 2);
-		obj.setY(y - obj.height);
+	updateNicknameView(): void {
+		this.nicknameView.setX(this.character.x - this.nicknameView.width / 2);
+		this.nicknameView.setY(this.character.y - this.character.height / 2 - this.nicknameView.height);
 	}
 
-	getPlayerLocation(): UserLocation {
+	getLocation(): UserLocation {
 		const location = new UserLocation();
-		location.update(this.player.isoX, this.player.isoY);
-		location.updateAngle(this.playerAngle);
+		location.update(this.character.isoX, this.character.isoY);
+		location.updateAngle(this.angle);
 		return location;
 	}
 
-	setPlayerLocation(location: UserLocation): void {
-		this.player.isoX = location.x;
-		this.player.isoY = location.y;
-		this.playerAngle = location.angle;
+	setLocation(location: UserLocation): void {
+		this.character.isoX = location.x;
+		this.character.isoY = location.y;
+		this.angle = location.angle;
 	}
 
-	setRemoteUsers(users: UserModel[]): void {
-		this.remoteUserModels = users;
-	}
-
-	setLocalUser(user: UserModel): void {
-		this.localUserModel = user;
+	destroy(): void {
+		if (this.enabledPhysics) {
+			this.isoPhysics.world.bodies.delete(this.character.body);
+		}
+		this.character.destroy();
+		this.viewingCursor.destroy();
+		this.nicknameView.destroy();
 	}
 }
 
