@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, ElementRef, ViewChild, Output, EventEmitter, ViewContainerRef } from '@angular/core';
-import { UserLocation, UserModel } from '../../models/user-model';
-import VRoomGame from "./vroom_game";
+import { UserModel } from '../../models/user-model';
+import VRoomGame from './vroom_game';
 
 @Component({
 	selector: 'vroom-component',
@@ -34,7 +34,7 @@ export class VirtualRoomComponent implements OnInit {
 	constructor() {}
 
 	ngOnInit() {
-		this._vroomGame = new VRoomGame('vroom-game', this._localUsers[0].location);
+		this._vroomGame = new VRoomGame('vroom-game', this._localUsers[0]);
 		this._vroomGame.playerLocationChanged.subscribe(location => {
 			this.locationChanged.emit({
 				x: location.x,

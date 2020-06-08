@@ -30,10 +30,11 @@ const VIEW_LINE_LENGTH = 150;
 
 
 export default class VRoomGame extends Phaser.Game {
-	playerLocationChanged = new Subject<UserLocation>();
-	private initializedPlayerLocation: UserLocation;
+	private initializedLocalUser: UserModel;
 
-	constructor(elementId, initializedPlayerLocation: UserLocation) {
+	playerLocationChanged = new Subject<UserLocation>();
+
+	constructor(elementId, initializedLocalUser: UserModel) {
 		super({
 			type: Phaser.AUTO,
 			width: WIDTH,
@@ -46,7 +47,7 @@ export default class VRoomGame extends Phaser.Game {
 			},
 			scene: MainScene
 		});
-		this.initializedPlayerLocation = initializedPlayerLocation;
+		this.initializedLocalUser = initializedLocalUser;
 	}
 
 	get mainScene(): MainScene {
@@ -54,21 +55,19 @@ export default class VRoomGame extends Phaser.Game {
 	}
 
 	start(): void {
-		super.start();
+		this.setLocalUser(this.initializedLocalUser);
 		this.mainScene.playerLocationChanged.subscribe(location => {
 			this.playerLocationChanged.next(location);
 		});
-		this.mainScene.events.once('create', () => {
-			this.setPlayerLocation(this.initializedPlayerLocation);
-		});
+		super.start();
 	}
 
 	setRemoteUsers(users: UserModel[]): void {
 		this.mainScene.setRemoteUsers(users);
 	}
 
-	setPlayerLocation(location: UserLocation): void {
-		this.mainScene.setPlayerLocation(location);
+	setLocalUser(user: UserModel): void {
+		this.mainScene.setLocalUser(user);
 	}
 }
 
@@ -80,6 +79,7 @@ class MainScene extends Phaser.Scene {
 	private player: IsoSprite;
 	private remotePlayers: {[key: string]: IsoSprite} = {};
 	private beforePlayerLocation: UserLocation;
+	private localUserModel: UserModel;
 	private remoteUserModels: UserModel[] = [];
 	private playerAngle: number;
 
@@ -156,14 +156,27 @@ class MainScene extends Phaser.Scene {
 	}
 
 	private createPlayer(): void {
+		let x = 0, y = 0, nickname = 'you';
+		if (this.localUserModel) {
+			x = this.localUserModel.location.x;
+			y = this.localUserModel.location.y;
+			nickname = this.localUserModel.nickname;
+		}
 		// @ts-ignore
-		this.player = this.add.isoSprite(0, 0, 15, 'cube2', this.isoGroup);
+		this.player = this.add.isoSprite(x, y, 15, 'cube2', this.isoGroup);
 		this.player.tint = 0x86bfda;
 		this.isoPhysics.world.enable(this.player);
 
 		this.player.viewingCursor = this.add.graphics();
 		this.player.viewingCursor.depth = 10000;
 		this.playerAngle = 0;
+
+		this.player.nickname = this.add.text(0, 0, nickname, {
+			fontSize: '24px',
+			backgroundColor: 'rgba(0, 0, 0, 0.8)',
+			color: '#fff'
+		});
+		this.player.nickname.depth = 11000;
 	}
 
 	update(): void {
@@ -211,6 +224,8 @@ class MainScene extends Phaser.Scene {
 			this.playerAngle, VIEWING_ANGLE, VIEW_LINE_LENGTH,
 			8, 0xff0000, 0.5
 		);
+
+		this.updateNicknameView(this.player.nickname, this.player.x, this.player.y - this.player.height / 2);
 	}
 
 	private updateRemotePlayers(): void {
@@ -232,6 +247,12 @@ class MainScene extends Phaser.Scene {
 				this.isoPhysics.world.enable(remotePlayer);
 				remotePlayer.viewingCursor = this.add.graphics();
 				remotePlayer.viewingCursor.depth = 9999;
+				remotePlayer.nickname = this.add.text(0, 0, remoteUser.nickname, {
+					fontSize: '24px',
+					backgroundColor: 'rgba(0, 0, 0, 0.65)',
+					color: '#fff'
+				});
+				remotePlayer.nickname.depth = 10999;
 				this.remotePlayers[id] = remotePlayer;
 			}
 			remotePlayer.isoX = remoteUser.location.x;
@@ -242,6 +263,8 @@ class MainScene extends Phaser.Scene {
 				remoteUser.location.angle, VIEWING_ANGLE, VIEW_LINE_LENGTH / 2,
 				4, 0x00ffff, 0.5
 			);
+
+			this.updateNicknameView(remotePlayer.nickname, remotePlayer.x, remotePlayer.y - remotePlayer.height / 2);
 		}
 
 		for (const id of Object.keys(updated)) {
@@ -283,6 +306,11 @@ class MainScene extends Phaser.Scene {
 			.strokePath();
 	}
 
+	private updateNicknameView(obj: Phaser.GameObjects.Text, x: number, y: number): void {
+		obj.setX(x - obj.width / 2);
+		obj.setY(y - obj.height);
+	}
+
 	getPlayerLocation(): UserLocation {
 		const location = new UserLocation();
 		location.update(this.player.isoX, this.player.isoY);
@@ -298,6 +326,10 @@ class MainScene extends Phaser.Scene {
 
 	setRemoteUsers(users: UserModel[]): void {
 		this.remoteUserModels = users;
+	}
+
+	setLocalUser(user: UserModel): void {
+		this.localUserModel = user;
 	}
 }
 
