@@ -237,6 +237,10 @@ class MainScene extends Phaser.Scene {
 			this.player.setVelocity(x, y);
 		}
 
+		if (this.localUserModel.nickname !== this.player.getNicknameText()) {
+			this.player.setNicknameText(this.localUserModel.nickname);
+		}
+
 		this.player.update();
 	}
 
@@ -266,6 +270,10 @@ class MainScene extends Phaser.Scene {
 				);
 				remotePlayer.addNickname(remoteUser.nickname, 10999, '#fff', 'rgba(0, 0, 0, 0.65)');
 				this.remotePlayers[id] = remotePlayer;
+			}
+
+			if (remoteUser.nickname !== remotePlayer.getNicknameText()) {
+				remotePlayer.setNicknameText(remoteUser.nickname);
 			}
 			remotePlayer.setLocation(remoteUser.location);
 			remotePlayer.update();
@@ -370,6 +378,14 @@ class VRoomPlayer {
 		});
 		this.nicknameView.depth = depth;
 		this.scene.add.existing(this.nicknameView);
+	}
+
+	getNicknameText(): string {
+		return this.nicknameView.text;
+	}
+
+	setNicknameText(nickname: string): void {
+		this.nicknameView.setText(nickname);
 	}
 
 	setVelocity(velocityX: number, velocityY: number): void {
