@@ -82,6 +82,8 @@ class MainScene extends Phaser.Scene {
 	private remoteUserModels: UserModel[] = [];
 	private tapsCount = 0;
 	private tapPoint: {x: number, y: number};
+	private localCharacterKeys: string[];
+	private remoteCharacterKeys: string[];
 
 	playerLocationChanged = new Subject<UserLocation>();
 	private tap: any;
@@ -96,6 +98,21 @@ class MainScene extends Phaser.Scene {
 		this.load.image('tile', '/assets/images/tile.png');
 		this.load.image('cube', '/assets/images/cube.png');
 		this.load.image('cube2', '/assets/images/cube2.png');
+
+		this.load.image('bit_kun01', 'assets/images/bit_kun01.png');
+		this.load.image('bit_kun02', 'assets/images/bit_kun02.png');
+		this.load.image('bit_kun03', 'assets/images/bit_kun03.png');
+		this.load.image('bit_kun04', 'assets/images/bit_kun04.png');
+
+		this.load.image('bit_kun01_mono', 'assets/images/bit_kun01_mono.png');
+		this.load.image('bit_kun02_mono', 'assets/images/bit_kun02_mono.png');
+		this.load.image('bit_kun03_mono', 'assets/images/bit_kun03_mono.png');
+		this.load.image('bit_kun04_mono', 'assets/images/bit_kun04_mono.png');
+
+		// right, bottom, left, top
+		this.localCharacterKeys = ['bit_kun02', 'bit_kun01', 'bit_kun03', 'bit_kun04'];
+		this.remoteCharacterKeys = ['bit_kun02_mono', 'bit_kun01_mono', 'bit_kun03_mono', 'bit_kun04_mono'];
+
 		this.load.scenePlugin({
 			key: 'IsoPlugin',
 			url: IsoPlugin,
@@ -166,7 +183,7 @@ class MainScene extends Phaser.Scene {
 			nickname = this.localUserModel.nickname;
 		}
 		this.player = new VRoomPlayer(this, this.iso, this.isoPhysics);
-		this.player.addCharacter(x, y, 15, this.isoGroup, 0x86bfda, true);
+		this.player.addCharacter(x, y, 30, this.isoGroup, true, this.localCharacterKeys);
 		this.player.addViewingCursor(
 			10000,
 			0,
@@ -174,7 +191,7 @@ class MainScene extends Phaser.Scene {
 			VIEW_LINE_LENGTH,
 			8,
 			0xff0000,
-			0.5
+			0.1
 		);
 		this.player.addNickname(nickname, 11000, '#fff', 'rgba(0, 0, 0, 0.8)');
 	}
@@ -215,7 +232,7 @@ class MainScene extends Phaser.Scene {
 
 		if (x || y) {
 			this.tapPoint = null;
-			const v = new Phaser.Math.Vector2(x, y).rotate(-Math.PI / 4);
+			const v = new Phaser.Math.Vector2(x, y).rotate(0);
 			const angle = v.angle();
 			this.player.setVelocity(v.x, v.y);
 			this.player.setAngle(angle * Phaser.Math.RAD_TO_DEG);
@@ -258,7 +275,7 @@ class MainScene extends Phaser.Scene {
 				updated[id] = true;
 			} else {
 				remotePlayer = new VRoomPlayer(this, this.iso, this.isoPhysics);
-				remotePlayer.addCharacter(0, 0, 15, this.isoGroup, 0xbf86da, false);
+				remotePlayer.addCharacter(0, 0, 30, this.isoGroup, false, this.remoteCharacterKeys);
 				remotePlayer.addViewingCursor(
 					9999,
 					0,
@@ -311,6 +328,7 @@ class VRoomPlayer {
 	private enabledPhysics: boolean;
 
 	character: IsoSprite;
+	characterKeys: string[];
 	viewingCursor: Phaser.GameObjects.Graphics;
 	nicknameView: Phaser.GameObjects.Text;
 
@@ -332,11 +350,11 @@ class VRoomPlayer {
 		y: number,
 		z: number,
 		group: Phaser.GameObjects.Group,
-		tint: number,
-		enabledPhysics: boolean
+		enabledPhysics: boolean,
+		characterKeys: string[]
 	): void {
-		this.character = new IsoSprite(this.scene, x, y, z, 'cube2', 0);
-		this.character.tint = tint;
+		this.characterKeys = characterKeys;
+		this.character = new IsoSprite(this.scene, x, y, z, characterKeys[0], 0);
 		group.add(this.character, true);
 		this.enabledPhysics = enabledPhysics;
 		if (this.enabledPhysics) {
@@ -401,8 +419,18 @@ class VRoomPlayer {
 	}
 
 	update(): void {
-		this.updateViewingCursor();
-		this.updateNicknameView();
+		this.updateCharacterTexture();
+		if (this.viewingCursor) {
+			this.updateViewingCursor();
+		}
+		if (this.nicknameView) {
+			this.updateNicknameView();
+		}
+	}
+
+	updateCharacterTexture(): void {
+		const r = Math.floor((this.angle + 45) % 360 / 90);
+		this.character.setTexture(this.characterKeys[r]);
 	}
 
 	updateViewingCursor(): void {
