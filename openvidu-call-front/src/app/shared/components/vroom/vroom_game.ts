@@ -80,13 +80,11 @@ class MainScene extends Phaser.Scene {
 	private beforePlayerLocation: UserLocation;
 	private localUserModel: UserModel;
 	private remoteUserModels: UserModel[] = [];
-	private tapsCount = 0;
 	private tapPoint: {x: number, y: number};
 	private localCharacterKeys: string[];
 	private remoteCharacterKeys: string[];
 
 	playerLocationChanged = new Subject<UserLocation>();
-	private tap: any;
 
 	constructor() {
 		super({
