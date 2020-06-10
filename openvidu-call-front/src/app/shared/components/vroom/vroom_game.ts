@@ -161,6 +161,7 @@ class MainScene extends Phaser.Scene {
 					const tile = this.add.isoSprite(x * BASE_SIZE, y * BASE_SIZE, -BASE_SIZE / 2 - 5, 'tile', this.isoGroup);
 					this.isoPhysics.world.enable(tile);
 					tile.body.immovable = true;
+					tile.tint = 0xe47833;
 
 					if (map[y][x] === 1) {
 						// @ts-ignore
