@@ -275,15 +275,6 @@ class MainScene extends Phaser.Scene {
 			} else {
 				remotePlayer = new VRoomPlayer(this, this.iso, this.isoPhysics);
 				remotePlayer.addCharacter(0, 0, 30, this.isoGroup, false, this.remoteCharacterKeys);
-				remotePlayer.addViewingCursor(
-					9999,
-					0,
-					VIEWING_ANGLE,
-					VIEW_LINE_LENGTH / 2,
-					4,
-					0x00ffff,
-					0.5
-				);
 				remotePlayer.addNickname(remoteUser.nickname, 10999, '#fff', 'rgba(0, 0, 0, 0.65)');
 				this.remotePlayers[id] = remotePlayer;
 			}
