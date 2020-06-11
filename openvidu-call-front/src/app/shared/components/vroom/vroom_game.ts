@@ -436,8 +436,12 @@ class VRoomPlayer {
 			this.isoPhysics.world.bodies.delete(this.character.body);
 		}
 		this.character.destroy();
-		this.viewingCursor.destroy();
-		this.nicknameView.destroy();
+		if (this.viewingCursor) {
+			this.viewingCursor.destroy();
+		}
+		if (this.nicknameView) {
+			this.nicknameView.destroy();
+		}
 	}
 }
 
