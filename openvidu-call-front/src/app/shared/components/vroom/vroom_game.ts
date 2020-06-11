@@ -129,17 +129,6 @@ class MainScene extends Phaser.Scene {
 		this.createMap();
 		this.createPlayer();
 
-		this.cursors = this.input.keyboard.addKeys({
-			up: Phaser.Input.Keyboard.KeyCodes.W,
-			up2: Phaser.Input.Keyboard.KeyCodes.UP,
-			down: Phaser.Input.Keyboard.KeyCodes.S,
-			down2: Phaser.Input.Keyboard.KeyCodes.DOWN,
-			left: Phaser.Input.Keyboard.KeyCodes.A,
-			left2: Phaser.Input.Keyboard.KeyCodes.LEFT,
-			right: Phaser.Input.Keyboard.KeyCodes.D,
-			right2: Phaser.Input.Keyboard.KeyCodes.RIGHT
-		}) as {[key: string]: Phaser.Input.Keyboard.Key};
-
 		this.input.on('pointerdown', pointer => {
 			this.tapPoint = {x: pointer.x, y: pointer.y};
 		});
@@ -198,33 +187,7 @@ class MainScene extends Phaser.Scene {
 	}
 
 	private updatePlayer(): void {
-		let x = 0;
-		let y = 0;
-
-		if (this.cursors.up.isDown || this.cursors.up2.isDown) {
-			y = -SPEED;
-		} else if (this.cursors.down.isDown || this.cursors.down2.isDown) {
-			y = SPEED;
-		}
-
-		if (this.cursors.left.isDown || this.cursors.left2.isDown) {
-			x = -SPEED;
-		} else if (this.cursors.right.isDown || this.cursors.right2.isDown) {
-			x = SPEED;
-		}
-
-		if (x && y) {
-			x = x * Math.cos(Math.PI / 4);
-			y = y * Math.sin(Math.PI / 4);
-		}
-
-		if (x || y) {
-			this.tapPoint = null;
-			const v = new Phaser.Math.Vector2(x, y).rotate(0);
-			const angle = v.angle();
-			this.player.setVelocity(v.x, v.y);
-			this.player.setAngle(angle * Phaser.Math.RAD_TO_DEG);
-		} else if (this.tapPoint) {
+		if (this.tapPoint) {
 			const current = this.player.getIsoPointXY();
 			const target = isoUnprojectPoint(this.iso.projector, this.tapPoint);
 			const v1 = new Phaser.Math.Vector2(current.x, current.y);
@@ -239,7 +202,7 @@ class MainScene extends Phaser.Scene {
 				this.player.setVelocity(0, 0);
 			}
 		} else {
-			this.player.setVelocity(x, y);
+			this.player.setVelocity(0, 0);
 		}
 
 		if (this.localUserModel.nickname !== this.player.getNicknameText()) {
