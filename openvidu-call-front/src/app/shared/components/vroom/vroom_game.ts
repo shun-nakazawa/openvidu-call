@@ -24,8 +24,6 @@ const BASE_SIZE = 35;
 const HEIGHT = 400;
 const WIDTH = 600;
 const SPEED = 100;
-const VIEWING_ANGLE = 120; // deg
-const VIEW_LINE_LENGTH = 150;
 
 
 export default class VRoomGame extends Phaser.Game {
@@ -183,15 +181,6 @@ class MainScene extends Phaser.Scene {
 		}
 		this.player = new VRoomPlayer(this, this.iso, this.isoPhysics);
 		this.player.addCharacter(x, y, 30, this.isoGroup, true, this.localCharacterKeys);
-		this.player.addViewingCursor(
-			10000,
-			0,
-			VIEWING_ANGLE,
-			VIEW_LINE_LENGTH,
-			8,
-			0xff0000,
-			0.1
-		);
 		this.player.addNickname(nickname, 11000, '#fff', 'rgba(0, 0, 0, 0.8)');
 	}
 
@@ -333,6 +322,7 @@ class VRoomPlayer {
 		this.scene = scene;
 		this.iso = iso;
 		this.isoPhysics = isoPhysics;
+		this.angle = 0;
 	}
 
 	addCharacter(
